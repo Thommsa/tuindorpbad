@@ -4,7 +4,7 @@ Eenvoudige webapp waarmee badmeesters en vrijwilligers van het **Tuindorpbad Hen
 
 - Mobielvriendelijk (werkt goed op telefoon)
 - Formulier + overzicht
-- Ticketnummers (begin/eind) → aantal kaartjes wordt automatisch berekend
+- Gebaseerd op het papieren formulier *Afrekenstaat Kaartverkoop*
 - Download naar Excel (CSV)
 - Werkt meteen lokaal (localStorage)
 - Klaar om te koppelen aan gratis Supabase (cloud + gedeeld voor iedereen)
@@ -14,20 +14,20 @@ Eenvoudige webapp waarmee badmeesters en vrijwilligers van het **Tuindorpbad Hen
 1. Open de file `index.html` in een browser, **of**
 2. Zet de repo live via GitHub Pages of Vercel (zie onder).
 
-## Velden (v1 – kunnen later aangepast worden)
+## Velden (gebaseerd op papieren Afrekenstaat)
 
 | Veld | Type |
 |------|------|
 | Datum | datum (standaard vandaag) |
-| Naam | tekst |
-| Beginnummer | getal (ticket) |
-| Eindnummer | getal (ticket) |
-| Aantal kaartjes | automatisch berekend |
-| Abonnementen jeugd | getal |
-| Abonnementen 65+ | getal |
-| Watertemperatuur | getal (°C) |
-| Totaal bezoekers | getal |
-| Dagstaat | groot tekstveld |
+| Naam | tekst (badmeester/assistent) |
+| Temp | getal (°C watertemperatuur) |
+| Eind Jeugd/65+ | getal (eindnummer kortingskaart) |
+| Aantal Jeugd/65+ | getal |
+| Eind Volwassenen | getal (eindnummer volwassenen) |
+| Aantal Volwassenen | getal |
+| Teller | getal |
+| Totaal | getal (totaal bezoekers) |
+| Dagstaat / Bijzonderheden | groot tekstveld |
 
 ## Supabase koppelen (aanbevolen – 5 minuten)
 
@@ -40,13 +40,13 @@ create table dagstaten (
   id uuid primary key default gen_random_uuid(),
   datum date not null,
   naam text not null,
-  beginnummer integer,
-  eindnummer integer,
-  aantal_kaartjes integer,
-  abonnement_jeugd integer default 0,
-  abonnement_senior integer default 0,
-  watertemp numeric,
-  totaal_bezoekers integer,
+  temp numeric,
+  eind_jeugd integer,
+  aantal_jeugd integer,
+  eind_volwassenen integer,
+  aantal_volwassenen integer,
+  teller integer,
+  totaal integer,
   dagstaat text,
   created_at timestamptz default now()
 );
@@ -86,11 +86,6 @@ const SUPABASE_ANON_KEY = 'jouw-anon-key';
 2. Import de repository `tuindorpbad`
 3. Deploy (geen build-instellingen nodig)
 4. Je krijgt een link zoals `https://tuindorpbad.vercel.app`
-
-## Later aanpassen van velden
-
-Alles staat in één bestand (`index.html`).  
-Wil je velden toevoegen of weghalen? Zeg het, dan pas ik het aan of je kunt zelf de formuliervelden en de JavaScript-objecten wijzigen.
 
 ## Broncode
 
