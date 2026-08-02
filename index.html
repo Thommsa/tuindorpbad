@@ -232,12 +232,22 @@
       created_at: new Date().toISOString()
     };
 
+    // Stap 1: altijd lokaal opslaan (fallback + offline). Dit mag nooit
+    // verloren gaan, dus dit zit buiten de try/catch voor Supabase.
+    let localSaveOk = true;
     try {
-      // Altijd lokaal opslaan (fallback + offline)
       saveLocalEntry(entry);
+    } catch (err) {
+      console.error('Lokaal opslaan mislukt:', err);
+      localSaveOk = false;
+    }
 
-      // Probeer ook naar Supabase te sturen als geconfigureerd
-      if (supabase) {
+    // Stap 2: probeer ook naar Supabase te sturen als geconfigureerd.
+    // Een fout hier mag de lokale opslag/reset niet blokkeren.
+    let cloudSaveOk = false;
+    let cloudError = null;
+    if (supabase) {
+      try {
         const { error } = await supabase.from('dagstaten').insert([{
           datum: entry.datum,
           naam: entry.naam,
@@ -251,12 +261,30 @@
           dagstaat: entry.dagstaat
         }]);
         if (error) throw error;
-        showMessage('Opgeslagen in de cloud ✓');
-      } else {
-        showMessage('Opgeslagen op dit apparaat ✓ (Supabase nog niet gekoppeld)');
+        cloudSaveOk = true;
+      } catch (err) {
+        console.error('Supabase opslaan mislukt:', err);
+        cloudError = err;
       }
+    }
 
-      // Formulier resetten (behalve datum)
+    // Stap 3: boodschap tonen op basis van wat er echt gebeurd is
+    if (!localSaveOk && !cloudSaveOk) {
+      showMessage('Fout bij opslaan: niets is opgeslagen. Probeer opnieuw.' +
+        (cloudError ? ' (' + (cloudError.message || cloudError) + ')' : ''), true);
+    } else if (supabase && cloudSaveOk) {
+      showMessage('Opgeslagen in de cloud ✓');
+    } else if (supabase && !cloudSaveOk) {
+      showMessage('Opgeslagen op dit apparaat ✓ — cloud opslaan mislukt (' +
+        (cloudError ? (cloudError.message || cloudError) : 'onbekende fout') +
+        '). Wordt lokaal bewaard.', true);
+    } else {
+      showMessage('Opgeslagen op dit apparaat ✓ (Supabase nog niet gekoppeld)');
+    }
+
+    // Stap 4: formulier resetten (behalve datum) — altijd, zolang de
+    // lokale opslag (de betrouwbare fallback) is gelukt.
+    if (localSaveOk) {
       document.getElementById('naam').value = '';
       document.getElementById('temp').value = '';
       document.getElementById('eind_jeugd').value = '';
@@ -266,14 +294,10 @@
       document.getElementById('teller').value = '';
       document.getElementById('totaal').value = '';
       document.getElementById('dagstaat').value = '';
-
-    } catch (err) {
-      console.error(err);
-      showMessage('Fout bij opslaan: ' + (err.message || err), true);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Opslaan';
     }
+
+    btn.disabled = false;
+    btn.textContent = 'Opslaan';
   }
 
   // ============================================
@@ -284,7 +308,8 @@
     const empty = document.getElementById('list-empty');
     container.innerHTML = '<p class="text-center text-slate-400 py-6">Laden…</p>';
 
-    let entries = [];
+    let cloudEntries = [];
+    let cloudFailed = false;
 
     if (supabase) {
       const { data, error } = await supabase
@@ -292,23 +317,41 @@
         .select('*')
         .order('datum', { ascending: false })
         .order('created_at', { ascending: false });
-      if (!error && data) entries = data;
+      if (!error && data) {
+        cloudEntries = data;
+      } else {
+        cloudFailed = true;
+        console.error('Kon dagstaten niet laden uit Supabase:', error);
+      }
     }
 
-    // Fallback / merge met lokale data
+    // Altijd samenvoegen met lokale data (niet alleen als fallback), zodat
+    // items die alleen lokaal bestaan (bijv. opgeslagen vóór koppeling, of
+    // offline) niet verdwijnen zodra er cloud-data is.
     const local = getLocalEntries();
-    if (entries.length === 0) {
-      entries = local;
-    }
+    const seen = new Set(cloudEntries.map(e => e.id).filter(Boolean));
+    const localOnly = local.filter(e => !seen.has(e.id));
+    let entries = [...cloudEntries, ...localOnly];
+
+    // Op datum + created_at sorteren, zoals de cloud-query ook doet
+    entries.sort((a, b) => {
+      const d = (b.datum || '').localeCompare(a.datum || '');
+      if (d !== 0) return d;
+      return (b.created_at || '').localeCompare(a.created_at || '');
+    });
+
+    const warningHtml = cloudFailed
+      ? '<p class="text-center text-red-500 text-sm py-2 mb-2">⚠️ Kon niet met de cloud verbinden — dit zijn alleen de lokale gegevens op dit apparaat.</p>'
+      : '';
 
     if (entries.length === 0) {
-      container.innerHTML = '';
+      container.innerHTML = warningHtml;
       empty.classList.remove('hidden');
       return;
     }
     empty.classList.add('hidden');
 
-    container.innerHTML = entries.map(e => `
+    container.innerHTML = warningHtml + entries.map(e => `
       <article class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
         <div class="flex justify-between items-start mb-2">
           <div>
@@ -379,15 +422,39 @@
   // ============================================
   document.getElementById('datum').value = todayISO();
 
-  // Toon status of we cloud of alleen lokaal gebruiken
+  // Toon status of we cloud of alleen lokaal gebruiken.
+  // Belangrijk: createClient() faalt nooit, ook niet met een verkeerde
+  // URL/key — dus we testen de verbinding hier echt met een lichte query,
+  // in plaats van te doen alsof "geconfigureerd" hetzelfde is als "werkt".
   const status = document.getElementById('status-bar');
   const statusText = document.getElementById('status-text');
+  status.classList.remove('hidden');
+
   if (supabase) {
-    statusText.textContent = 'Verbonden met Supabase';
-    status.classList.remove('hidden');
+    statusText.textContent = 'Verbinden met Supabase…';
+    supabase
+      .from('dagstaten')
+      .select('id', { count: 'exact', head: true })
+      .then(({ error }) => {
+        if (error) {
+          console.error('Supabase verbindingstest mislukt:', error);
+          statusText.textContent = '⚠️ Supabase niet bereikbaar (' +
+            (error.message || 'onbekende fout') +
+            ') — werkt nu lokaal';
+          status.classList.remove('bg-slate-800');
+          status.classList.add('bg-red-800');
+        } else {
+          statusText.textContent = 'Verbonden met Supabase ✓';
+        }
+      })
+      .catch(err => {
+        console.error('Supabase verbindingstest mislukt:', err);
+        statusText.textContent = '⚠️ Supabase niet bereikbaar — werkt nu lokaal';
+        status.classList.remove('bg-slate-800');
+        status.classList.add('bg-red-800');
+      });
   } else {
     statusText.textContent = 'Demo-modus (alleen dit apparaat) – koppel Supabase via de code';
-    status.classList.remove('hidden');
   }
 </script>
 </body>
