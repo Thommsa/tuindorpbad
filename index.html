@@ -437,8 +437,8 @@
       .select('id', { count: 'exact', head: true })
       .then(({ error }) => {
         if (error) {
-          console.error('Supabase verbindingstest mislukt:', error);
-          statusText.textContent = '⚠️ Supabase niet bereikbaar (' +
+          console.error('verbindingstest mislukt:', error);
+          statusText.textContent = '⚠️ geen verbinding (' +
             (error.message || 'onbekende fout') +
             ') — werkt nu lokaal';
           status.classList.remove('bg-slate-800');
@@ -449,7 +449,7 @@
       })
       .catch(err => {
         console.error('Supabase verbindingstest mislukt:', err);
-        statusText.textContent = '⚠️ Supabase niet bereikbaar — werkt nu lokaal';
+        statusText.textContent = '⚠️ geen verbinding — werkt nu lokaal';
         status.classList.remove('bg-slate-800');
         status.classList.add('bg-red-800');
       });
