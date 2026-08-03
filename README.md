@@ -70,37 +70,3 @@ create policy "Iedereen mag invoegen (gevalideerd)"
     and (totaal is null or totaal >= 0)
     and (teller is null or teller >= 0)
   );
-```
-
-Als je ooit naar een nieuw Supabase-project moet overstappen:
-
-1. Maak een nieuw project op [supabase.com](https://supabase.com)
-2. Voer bovenstaande SQL uit in de **SQL Editor**
-3. Ga naar **Project Settings → API Keys** en kopieer de **Project URL** en de **publishable key**
-4. Vul die in bovenaan in de `<script>`-sectie van `index.html`:
-
-```js
-const SUPABASE_URL = 'https://jouw-project.supabase.co';
-const SUPABASE_ANON_KEY = 'jouw-publishable-key';
-```
-
-5. Commit en push — Vercel deployt automatisch opnieuw.
-
-> **Beveiliging:** er is geen authenticatie op deze tabel — iedereen met de publishable key (zichtbaar in `index.html`, ook op GitHub) kan lezen en geldige rijen toevoegen. Dat is bewust simpel gehouden. Merk je spam op? Rotate de key via **Project Settings → API → API Keys**.
-
-## Deployen (gratis)
-
-### Vercel
-1. Ga naar [vercel.com](https://vercel.com) en log in met GitHub
-2. Import de repository `tuindorpbad`
-3. Deploy (geen build-instellingen nodig — dit is een losse statische `index.html`)
-4. Elke push naar `main` deployt automatisch opnieuw
-
-### Alternatief — GitHub Pages
-1. Repo Settings → Pages
-2. Source: Deploy from a branch → `main` / root
-3. Na een minuut staat de app op `https://thommsa.github.io/tuindorpbad/`
-
-## Broncode
-
-https://github.com/Thommsa/tuindorpbad
