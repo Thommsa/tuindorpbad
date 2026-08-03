@@ -438,18 +438,18 @@
       .then(({ error }) => {
         if (error) {
           console.error('Supabase verbindingstest mislukt:', error);
-          statusText.textContent = '⚠️ Supabase niet bereikbaar (' +
+          statusText.textContent = '⚠️ geen verbinding (' +
             (error.message || 'onbekende fout') +
             ') — werkt nu lokaal';
           status.classList.remove('bg-slate-800');
           status.classList.add('bg-red-800');
         } else {
-          statusText.textContent = 'Verbonden met Supabase ✓';
+          statusText.textContent = 'Verbonden ✓';
         }
       })
       .catch(err => {
         console.error('Supabase verbindingstest mislukt:', err);
-        statusText.textContent = '⚠️ Supabase niet bereikbaar — werkt nu lokaal';
+        statusText.textContent = '⚠️ geen verbinding — werkt nu lokaal';
         status.classList.remove('bg-slate-800');
         status.classList.add('bg-red-800');
       });
