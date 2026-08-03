@@ -7,6 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>Dagstaat Tuindorpbad</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/favicon.svg" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.min.js"></script>
   <style>
@@ -154,7 +156,7 @@
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/\"/g, '&quot;');
   }
 
   function showTab(tab) {
@@ -296,11 +298,11 @@
     const rows = entries.map(e => [
       e.datum || '', e.naam || '', e.temp ?? '', e.eind_jeugd ?? '', e.aantal_jeugd ?? '',
       e.eind_volwassenen ?? '', e.aantal_volwassenen ?? '', e.teller ?? '', e.totaal ?? '',
-      (e.dagstaat || '').replace(/"/g, '""'), e.created_at || ''
+      (e.dagstaat || '').replace(/\"/g, '\"\"'), e.created_at || ''
     ]);
 
     let csv = headers.join(';') + '\n';
-    rows.forEach(r => { csv += r.map(c => `"${c}"`).join(';') + '\n'; });
+    rows.forEach(r => { csv += r.map(c => `\"${c}\"`).join(';') + '\n'; });
 
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
